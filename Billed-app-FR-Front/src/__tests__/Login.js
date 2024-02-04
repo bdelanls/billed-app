@@ -228,3 +228,103 @@ describe("Given that I am a user on login page", () => {
     });
   });
 });
+
+
+// suite des tests
+describe("Given that I am a user on login page", () => {
+
+  describe("When employee login fails", () => {
+    test("Then createUser should be called for employee", async () => {
+      document.body.innerHTML = LoginUI();
+      const inputData = {
+        email: "johndoe@email.com",
+        password: "azerty",
+      };
+
+      const inputEmailUser = screen.getByTestId("employee-email-input");
+      fireEvent.change(inputEmailUser, { target: { value: inputData.email } });
+      const inputPasswordUser = screen.getByTestId("employee-password-input");
+      fireEvent.change(inputPasswordUser, { target: { value: inputData.password } });
+
+      const form = screen.getByTestId("form-employee");
+
+      // Mock de localStorage
+      Object.defineProperty(window, "localStorage", {
+        value: { setItem: jest.fn() },
+        writable: true,
+      });
+
+      // Mock de navigation
+      const onNavigate = jest.fn();
+
+      const login = new Login({
+        document,
+        localStorage: window.localStorage,
+        onNavigate,
+        store: null,
+      });
+
+      // Mock de login pour rejeter une promesse
+      login.login = jest.fn().mockRejectedValue(new Error("Login failed"));
+
+      // Spy sur createUser pour vérifier qu'elle est appelée
+      const createUserSpy = jest.spyOn(login, "createUser");
+
+      form.addEventListener("submit", login.handleSubmitEmployee);
+      fireEvent.submit(form);
+
+      // Attendre que les promesses soient résolues
+      await new Promise(process.nextTick);
+
+      expect(createUserSpy).toHaveBeenCalled();
+    });
+  });
+
+  describe("When admin login fails", () => {
+    test("Then createUser should be called for admin", async () => {
+      document.body.innerHTML = LoginUI();
+      const inputData = {
+        email: "admin@example.com",
+        password: "adminpassword",
+      };
+
+      const inputEmailAdmin = screen.getByTestId("admin-email-input");
+      fireEvent.change(inputEmailAdmin, { target: { value: inputData.email } });
+      const inputPasswordAdmin = screen.getByTestId("admin-password-input");
+      fireEvent.change(inputPasswordAdmin, { target: { value: inputData.password } });
+
+      const formAdmin = screen.getByTestId("form-admin");
+
+      // Mock de localStorage
+      Object.defineProperty(window, "localStorage", {
+        value: { setItem: jest.fn() },
+        writable: true,
+      });
+
+      // Mock de navigation
+      const onNavigate = jest.fn();
+
+      const login = new Login({
+        document,
+        localStorage: window.localStorage,
+        onNavigate,
+        store: null,
+      });
+
+      // Mock de login pour rejeter une promesse
+      login.login = jest.fn().mockRejectedValue(new Error("Admin login failed"));
+
+      // Spy sur createUser pour vérifier qu'elle est appelée
+      const createUserSpy = jest.spyOn(login, "createUser");
+
+      formAdmin.addEventListener("submit", login.handleSubmitAdmin);
+      fireEvent.submit(formAdmin);
+
+      // Attendre que les promesses soient résolues
+      await new Promise(process.nextTick);
+
+      expect(createUserSpy).toHaveBeenCalled();
+    });
+  });
+
+});

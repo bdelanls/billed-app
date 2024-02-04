@@ -46,3 +46,69 @@ describe("Given I am connected as an employee", () => {
     })
   })
 })
+
+// test d'intégration GET
+describe("Given I am a user connected as Admin", () => {
+  describe("When I navigate to Profile", () => {
+    test("fetches profile from mock API GET", async () => {
+      localStorage.setItem("user", JSON.stringify({ type: "Admin", email: "a@a" }));
+      const root = document.createElement("div")
+      root.setAttribute("id", "root")
+      document.body.append(root)
+      router()
+      window.onNavigate(ROUTES_PATH.Profile)
+      await waitFor(() => screen.getByText("Profile"))
+      const contentName  = await screen.getByText("Nom: Admin")
+      expect(contentName).toBeTruthy()
+      const contentEmail  = await screen.getByText("Email: a@a")
+      expect(contentEmail).toBeTruthy()
+    })
+  describe("When an error occurs on API", () => {
+    beforeEach(() => {
+      jest.spyOn(mockStore, "profile")
+      Object.defineProperty(
+          window,
+          'localStorage',
+          { value: localStorageMock }
+      )
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Admin',
+        email: "a@a"
+      }))
+      const root = document.createElement("div")
+      root.setAttribute("id", "root")
+      document.body.appendChild(root)
+      router()
+    })
+    test("fetches profile from an API and fails with 404 message error", async () => {
+
+      mockStore.profile.mockImplementationOnce(() => {
+        return {
+          get : () =>  {
+            return Promise.reject(new Error("Erreur 404"))
+          }
+        }})
+      window.onNavigate(ROUTES_PATH.Profile)
+      await new Promise(process.nextTick);
+      const message = await screen.getByText(/Erreur 404/)
+      expect(message).toBeTruthy()
+    })
+
+    test("fetches profile from an API and fails with 500 message error", async () => {
+
+      mockStore.profile.mockImplementationOnce(() => {
+        return {
+          get : () =>  {
+            return Promise.reject(new Error("Erreur 500"))
+          }
+        }})
+
+      window.onNavigate(ROUTES_PATH.Profile)
+      await new Promise(process.nextTick);
+      const message = await screen.getByText(/Erreur 500/)
+      expect(message).toBeTruthy()
+    })
+  })
+
+  })
+})
