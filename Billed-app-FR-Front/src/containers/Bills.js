@@ -34,6 +34,8 @@ export default class {
       .list()
       .then(snapshot => {
         const bills = snapshot
+          // Tri des factures par date en ordre décroissant
+          .sort((a, b) => b.date.localeCompare(a.date))
           .map(doc => {
             try {
               return {
