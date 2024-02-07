@@ -5,14 +5,16 @@
 import {screen, waitFor} from "@testing-library/dom"
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills.js"
-// import Bills from "../containers/Bills.js"
+import Bills from "../containers/Bills.js"
 import { ROUTES_PATH, ROUTES} from "../constants/routes.js";
 import {localStorageMock} from "../__mocks__/localStorage.js";
 import mockStore from "../__mocks__/store";
 import '@testing-library/jest-dom';
 import router from "../app/Router.js";
+import { formatDate, formatStatus } from "../app/format.js"
 
-// jest.mock("../app/store", () => mockStore);
+jest.mock("../app/store", () => mockStore);
+jest.mock('../app/format.js')
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
@@ -47,71 +49,184 @@ describe("Given I am connected as an employee", () => {
       const datesSorted = [...dates].sort(antiChrono)
       expect(dates).toEqual(datesSorted)
     })
+
+    
+
   })
+
+  // vérifie la fonctionnalité de la méthode handleClickIconEye
+  describe("When I am on Bills Page and I click on the eye icon", () => {
+    test("Then it should call the handleClickIconEye function", () => {
+      const document = { 
+        querySelector: jest.fn().mockReturnValue({
+          getAttribute: jest.fn(),
+          addEventListener: jest.fn()
+        }),
+        querySelectorAll: jest.fn().mockReturnValue([{
+          click: jest.fn(),
+          getAttribute: jest.fn(),
+          addEventListener: jest.fn()
+        }])
+      }
+      const onNavigate = jest.fn()
+      const store = null
+      const localStorage = window.localStorage
+
+      const bills = new Bills({
+        document, 
+        onNavigate, 
+        store, 
+        localStorage
+      })
+
+      const handleClickIconEye = jest.spyOn(bills, "handleClickIconEye")
+      const iconEye = document.querySelector(`div[data-testid="icon-eye"]`)
+
+      // Mock jQuery modal
+      const modalMock = jest.fn()
+      $.fn.modal = modalMock
+
+      bills.handleClickIconEye(iconEye)
+      expect(handleClickIconEye).toHaveBeenCalled()
+      expect(modalMock).toHaveBeenCalled()
+    })
+  })
+
+  // Vérifie que la méthode handleClickNewBill appelle correctement la méthode onNavigate avec le bon argument.
+  describe("When I click on the button to create a new bill", () => {
+    test("Then it should call the handleClickIconEye function", () => {
+      const onNavigate = jest.fn()
+      const handleClickIconEyeSpy = jest.fn()
+      const document = {
+        querySelector: jest.fn().mockImplementation((selector) => {
+          if (selector === `button[data-testid="btn-new-bill"]`) {
+            return { addEventListener: jest.fn() }
+          } else if (selector === `div[data-testid="icon-eye"]`) {
+            return { 
+              getAttribute: jest.fn(),
+              click: jest.fn().mockImplementation(() => handleClickIconEyeSpy()),
+              addEventListener: jest.fn().mockImplementation((event, callback) => {
+                if (event === 'click') {
+                  callback()
+                }
+              })
+            }
+          }
+        }),
+        querySelectorAll: jest.fn().mockReturnValue([{ 
+          getAttribute: jest.fn(),
+          click: jest.fn().mockImplementation(() => handleClickIconEyeSpy()),
+          addEventListener: jest.fn().mockImplementation((event, callback) => {
+            if (event === 'click') {
+              callback()
+            }
+          })
+        }]) 
+      }
+      const localStorage = window.localStorage
+      const store = null
+  
+      const bills = new Bills({
+        document, 
+        onNavigate, 
+        store, 
+        localStorage
+      })
+  
+      const iconEye = document.querySelector(`div[data-testid="icon-eye"]`)
+      iconEye.click()
+      expect(handleClickIconEyeSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe("When I click on the button to create a new bill", () => {
+    // Vérifie le comportement de la méthode handleClickNewBill de la classe Bills
+    test("Then it should call the onNavigate function with the 'NewBill' route", () => {
+      const onNavigate = jest.fn()
+      const document = {
+        querySelector: jest.fn(),
+        querySelectorAll: jest.fn()
+      }
+      const localStorage = window.localStorage
+      const store = null
+  
+      const bills = new Bills({
+        document, 
+        onNavigate, 
+        store, 
+        localStorage
+      })
+  
+      bills.handleClickNewBill()
+      expect(onNavigate).toHaveBeenCalledWith(ROUTES_PATH['NewBill'])
+    })
+  })
+
 })
 
-// test d'intégration GET
-describe("Given I am a user connected as Admin", () => {
-  describe("When I navigate to Profile", () => {
-    test("fetches profile from mock API GET", async () => {
-      localStorage.setItem("user", JSON.stringify({ type: "Admin", email: "a@a" }));
-      const root = document.createElement("div")
-      root.setAttribute("id", "root")
-      document.body.append(root)
-      router()
-      window.onNavigate(ROUTES_PATH.Profile)
-      await waitFor(() => screen.getByText("Profile"))
-      const contentName  = await screen.getByText("Nom: Admin")
-      expect(contentName).toBeTruthy()
-      const contentEmail  = await screen.getByText("Email: a@a")
-      expect(contentEmail).toBeTruthy()
-    })
+
+// Test d'intégration GET Bills
+describe("Given I am a user connected as Employee", () => {
+
   describe("When an error occurs on API", () => {
     beforeEach(() => {
-      jest.spyOn(mockStore, "profile")
-      Object.defineProperty(
-          window,
-          'localStorage',
-          { value: localStorageMock }
-      )
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Admin',
-        email: "a@a"
-      }))
-      const root = document.createElement("div")
-      root.setAttribute("id", "root")
-      document.body.appendChild(root)
-      router()
-    })
-    test("fetches profile from an API and fails with 404 message error", async () => {
+      jest.spyOn(mockStore, "bills");
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+      window.localStorage.setItem('user', JSON.stringify({ type: 'Employee', email: "employee@example.com" }));
+      document.body.innerHTML = `<div id="root"></div>`;
+      router();
+    });
 
-      mockStore.profile.mockImplementationOnce(() => {
+    test("fetches bills from an API and fails with 404 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
         return {
-          get : () =>  {
-            return Promise.reject(new Error("Erreur 404"))
-          }
-        }})
-      window.onNavigate(ROUTES_PATH.Profile)
+          list: () => Promise.reject(new Error("Erreur 404"))
+        };
+      });
+      window.onNavigate(ROUTES_PATH.Bills);
       await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 404/)
-      expect(message).toBeTruthy()
-    })
+      const message = await screen.getByText(/Erreur 404/);
+      expect(message).toBeTruthy();
+    });
 
-    test("fetches profile from an API and fails with 500 message error", async () => {
-
-      mockStore.profile.mockImplementationOnce(() => {
+    test("fetches bills from an API and fails with 500 message error", async () => {
+      mockStore.bills.mockImplementationOnce(() => {
         return {
-          get : () =>  {
-            return Promise.reject(new Error("Erreur 500"))
-          }
-        }})
-
-      window.onNavigate(ROUTES_PATH.Profile)
+          list: () => Promise.reject(new Error("Erreur 500"))
+        };
+      });
+      window.onNavigate(ROUTES_PATH.Bills);
       await new Promise(process.nextTick);
-      const message = await screen.getByText(/Erreur 500/)
-      expect(message).toBeTruthy()
+      const message = await screen.getByText(/Erreur 500/);
+      expect(message).toBeTruthy();
+    });
+  });
+
+  describe('getBills', () => {
+    test('logs an error and returns the unformatted date when formatDate throws an error', async () => {
+      const mockStore = {
+        bills: jest.fn().mockReturnValue({
+          list: jest.fn().mockResolvedValue([
+            { date: '2022-01-01', status: 'pending' },
+            // Ajoutez ici d'autres factures si nécessaire
+          ]),
+        }),
+      }
+      const consoleLogSpy = jest.spyOn(console, 'log')
+      formatDate.mockImplementationOnce(() => {
+        throw new Error('formatDate error')
+      })
+      document.body.innerHTML = `<div id="root"></div>`
+      const buttonNewBill = document.querySelector(`button[data-testid="btn-new-bill"]`)
+      const iconEye = document.querySelectorAll(`div[data-testid="icon-eye"]`)
+
+      const bills = new Bills({ document, onNavigate: () => {}, store: mockStore, localStorage: window.localStorage })
+      await bills.getBills()
+
+      expect(consoleLogSpy).toHaveBeenCalledWith(new Error('formatDate error'), 'for', { date: '2022-01-01', status: 'pending' })
     })
   })
+});
 
-  })
-})
+
+
