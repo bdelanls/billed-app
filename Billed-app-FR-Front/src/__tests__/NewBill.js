@@ -11,7 +11,6 @@ import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
 import mockStore from "../__mocks__/store.js";
 import '@testing-library/jest-dom';
 
-// jest.mock("../app/store", () => mockStore);
 jest.mock("../app/store", () => {
   return () => mockStore;
 });
@@ -98,6 +97,8 @@ describe("Given I am connected as an employee", () => {
 
 
   describe("When I submit the form", () => {
+
+    // Vérifie que la méthode handleSubmit est bien appelée
     test("Then the handleSubmit method should be called", () => {
       const html = NewBillUI();
       document.body.innerHTML = html;
@@ -115,35 +116,7 @@ describe("Given I am connected as an employee", () => {
       expect(handleSubmit).toHaveBeenCalled();
     });
 
-    // Vérifie que la méthode handleSubmit est bien appelée
-    test("Then the handleSubmit method should be called", () => {
-      // Créer un DOM virtuel
-      const html = NewBillUI();
-      document.body.innerHTML = html;
-
-      // Simuler un utilisateur connecté
-      window.localStorage.setItem("user", JSON.stringify({ email: "employee@test.com" }));
-
-      // Créer une nouvelle instance de NewBill
-      const onNavigate = jest.fn();
-      const newBill = new NewBill({ document, onNavigate, localStorage: window.localStorage });
-
-      // Espionner la méthode handleSubmit
-      newBill.handleSubmit = jest.fn();
-      newBill.handleSubmit.bind(newBill);
-
-      // Simuler la soumission du formulaire
-      const form = screen.getByTestId("form-new-bill");
-      form.addEventListener("submit", newBill.handleSubmit);
-      fireEvent.submit(form);
-
-      // Vérifier que handleSubmit a été appelée
-      expect(newBill.handleSubmit).toHaveBeenCalled();
-    });
-
-   
     
-
 
   });
 
@@ -165,24 +138,23 @@ describe("Given I am connected as an employee", () => {
         }),
       };
   
-      //const onNavigate = jest.fn();
-      //const newBill = new NewBill({ document, onNavigate, store: mockStore, localStorage: window.localStorage });
-  
       // Création d'un objet DataTransfer pour simuler un FileList
       const dataTransfer = new DataTransferMock();
       dataTransfer.setData("files", [new File(["content"], "bill.jpg", { type: "image/jpg" })]);
       
       const input = document.querySelector("input[type='file']");
-      Object.defineProperty(input, 'files', {
-        value: dataTransfer.getData("files"),
-        writable: false,
-      });
+      if (input) {
+        Object.defineProperty(input, 'files', {
+          value: dataTransfer.getData("files"),
+          writable: false,
+        });
+      }
 
       // Créer un mock pour l'événement passé à handleChangeFile
       const eventMock = {
         preventDefault: jest.fn(),
         target: {
-          value: 'C:\\fakepath\\bill.jpg', // Ajoute une valeur factice qui représente le chemin du fichier
+          value: 'C:\\path\\bill.jpg', // Ajoute une valeur factice qui représente le chemin du fichier
           files: [new File(["content"], "bill.jpg", { type: "image/jpg" })]
         }
       };
