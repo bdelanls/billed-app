@@ -2,12 +2,10 @@
  * @jest-environment jsdom
  */
 
-import { screen, fireEvent, waitFor } from "@testing-library/dom"
-import NewBillUI from "../views/NewBillUI.js"
-import NewBill from "../containers/NewBill.js"
+import { screen, fireEvent, waitFor } from "@testing-library/dom";
+import NewBillUI from "../views/NewBillUI.js";
+import NewBill from "../containers/NewBill.js";
 import { localStorageMock } from "../__mocks__/localStorage.js";
-import router from "../app/Router.js";
-import { ROUTES_PATH, ROUTES } from "../constants/routes.js";
 import mockStore from "../__mocks__/store.js";
 import '@testing-library/jest-dom';
 
@@ -15,166 +13,102 @@ jest.mock("../app/store", () => {
   return () => mockStore;
 });
 
-class DataTransferMock {
-  constructor() {
-    this.data = {};
-  }
 
-  setData(format, data) {
-    this.data[format] = data;
-  }
 
-  getData(format) {
-    return this.data[format];
-  }
-}
-
-global.DataTransfer = DataTransferMock;
-
-// Test d'intégration POST Bills
 describe("Given I am connected as an employee", () => {
+
+  beforeEach(() => {
+    document.body.innerHTML = NewBillUI();
+    window.localStorage.setItem("user", JSON.stringify({ email: "employee@test.com" }));
+  });
+
   describe("When I am on NewBill Page", () => {
-    
-    
-    // Vérifie que le formulaire est bien affiché
+
+    // Vérifie que le formulaire est correctement rendu sur la page.
     test("Then the form should be rendered", () => {
-      const html = NewBillUI();
-      document.body.innerHTML = html;
       const form = screen.getByTestId("form-new-bill");
       expect(form).toBeTruthy();
     });
 
-    // Vérifie que le fichier est bien ajouté si le format est valide (jpg, jpeg, png)
+    // Vérifie que l'utilisateur ajoute un fichier au format valide (jpg, jpeg, png).
     test("Then the file should be added if the format is valid (jpg, jpeg, png)", () => {
-      const html = NewBillUI();
-      document.body.innerHTML = html;
-      const file = screen.getByTestId("file");
-      const validFile = new File(["test"], "test.jpg", { type: "image/jpeg" });
-      fireEvent.change(file, { target: { files: [validFile] } });
-      expect(file.files[0].name).toBe("test.jpg");
+      const fileInput = screen.getByTestId("file");
+      const file = new File(["test"], "test.jpg", { type: "image/jpeg" });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+      expect(fileInput.files[0].name).toBe("test.jpg");
     });
 
+    // Vérifie que l'application alerte l'utilisateur si le format du fichier est invalide.
     test("Then the file should not be added if the format is invalid", () => {
-      const html = NewBillUI();
-      document.body.innerHTML = html;
+      document.body.innerHTML = NewBillUI();
       const onNavigate = jest.fn();
       const newBill = new NewBill({ document, onNavigate, store: mockStore, localStorage: localStorageMock });
     
-      // Simuler la sélection d'un fichier invalide
+      const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    
       const fileInput = screen.getByTestId("file");
       Object.defineProperty(fileInput, 'files', {
         value: [new File([""], "test.txt", { type: "text/plain" })],
       });
       fireEvent.change(fileInput);
     
-      // Attendre et vérifier que l'alerte est déclenchée ou que le fichier n'est pas accepté
-      // Ce test dépend de la façon dont ton application gère ce cas
+      expect(alertMock).toHaveBeenCalledWith("Seuls les fichiers jpg, jpeg et png sont autorisés");
+      alertMock.mockRestore();
     });
 
-
-    // Vérifie que la nouvelle note de frais peut être envoyée
-    test("Then the new bill can be sent", () => {
-      const html = NewBillUI();
-      document.body.innerHTML = html;
-
-      // Simuler un utilisateur connecté
-      window.localStorage.setItem("user", JSON.stringify({ email: "employee@test.com" }));
-
+    // Vérifie que la méthode handleSubmit est appelée lors de la soumission du formulaire
+    test("Then the handleSubmit method should be called upon form submission", () => {
       const onNavigate = jest.fn();
+      const newBill = new NewBill({ document, onNavigate, store: mockStore, localStorage: window.localStorage });
 
-      const newBill = new NewBill({ document, onNavigate, localStorage: window.localStorage });
-      const handleSubmit = jest.fn(newBill.handleSubmit.bind(newBill));
+      const handleSubmitSpy = jest.spyOn(newBill, "handleSubmit");
+
       const form = screen.getByTestId("form-new-bill");
-      form.addEventListener("submit", handleSubmit);
+      form.addEventListener("submit", (e) => newBill.handleSubmit(e)); // Assurez-vous que handleSubmit est appelée
       fireEvent.submit(form);
-      expect(handleSubmit).toHaveBeenCalled();
+
+      expect(handleSubmitSpy).toHaveBeenCalled();
     });
 
-
-    
-
-  })
-
-
-  describe("When I submit the form", () => {
-
-    // Vérifie que la méthode handleSubmit est bien appelée
-    test("Then the handleSubmit method should be called", () => {
-      const html = NewBillUI();
-      document.body.innerHTML = html;
-
-      // Simuler un utilisateur connecté
-      window.localStorage.setItem("user", JSON.stringify({ email: "employee@test.com" }));
-
-      const onNavigate = jest.fn();
-
-      const newBill = new NewBill({ document, onNavigate, localStorage: window.localStorage });
-      const handleSubmit = jest.fn(newBill.handleSubmit.bind(newBill));
-      const form = screen.getByTestId("form-new-bill");
-      form.addEventListener("submit", handleSubmit);
-      fireEvent.submit(form);
-      expect(handleSubmit).toHaveBeenCalled();
-    });
-
-    
-
-  });
-
-  
-  describe("Given I am a user submitting a new bill", () => {
+    // Vérifie que la création d'une nouvelle facture avec des données correctes met à jour l'ID, l'URL, et le nom du fichier de la facture.
     test("Then it should create a new bill with correct data and update bill ID, file URL, and file name on success", async () => {
-      // Mock de localStorage.getItem pour simuler un utilisateur connecté
-      window.localStorage.setItem("user", JSON.stringify({ email: "user@example.com" }));
-  
-      // Créer un mock pour `store.bills().create`
+      document.body.innerHTML = NewBillUI();
+
+      window.localStorage.setItem("user", JSON.stringify({ type: "Employee", email: "employee@example.com" }));
+
       const createBillMock = jest.fn().mockResolvedValue({
         fileUrl: "http://example.com/bill.jpg",
         key: "123",
       });
-  
       const mockStore = {
         bills: () => ({
           create: createBillMock,
         }),
       };
-  
-      // Création d'un objet DataTransfer pour simuler un FileList
-      const dataTransfer = new DataTransferMock();
-      dataTransfer.setData("files", [new File(["content"], "bill.jpg", { type: "image/jpg" })]);
-      
-      const input = document.querySelector("input[type='file']");
-      if (input) {
-        Object.defineProperty(input, 'files', {
-          value: dataTransfer.getData("files"),
-          writable: false,
-        });
-      }
 
-      // Créer un mock pour l'événement passé à handleChangeFile
-      const eventMock = {
+      const onNavigate = jest.fn();
+      const newBill = new NewBill({ document, onNavigate, store: mockStore, localStorage: window.localStorage });
+
+      const input = screen.getByTestId("file");
+      const file = new File(["file content"], "bill.jpg", { type: "image/jpg" });
+      fireEvent.change(input, { target: { files: [file] }});
+
+      await newBill.handleChangeFile({
         preventDefault: jest.fn(),
         target: {
-          value: 'C:\\path\\bill.jpg', // Ajoute une valeur factice qui représente le chemin du fichier
-          files: [new File(["content"], "bill.jpg", { type: "image/jpg" })]
+          files: [file],
+          value: 'C:\\path\\bill.jpg'
         }
-      };
+      });
 
-
-      // Simuler l'ajout du fichier
-      const newBill = new NewBill({ document, onNavigate: jest.fn(), store: mockStore, localStorage: window.localStorage });
-      newBill.handleChangeFile(eventMock);
-  
-      // Attendre la fin de l'opération asynchrone
       await waitFor(() => expect(createBillMock).toHaveBeenCalled());
-  
-      // Vérifications finales
+
+      // Assertions pour vérifier que le fichier a été créé avec succès
       expect(newBill.fileUrl).toBe("http://example.com/bill.jpg");
       expect(newBill.billId).toBe("123");
       expect(newBill.fileName).toBe("bill.jpg");
     });
+
   });
 
-      
-
-
-})
+});
