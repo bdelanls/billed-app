@@ -33,6 +33,7 @@ export default class {
       .bills()
       .list()
       .then(snapshot => {
+        console.log("Avant le tri :", snapshot.map(doc => doc.date))
         const bills = snapshot
           // Tri des factures par date en ordre décroissant
           .sort((a, b) => b.date.localeCompare(a.date))
@@ -54,7 +55,7 @@ export default class {
               }
             }
           })
-          console.log('length', bills.length)
+          console.log("Après le tri :", bills.map(bill => bill.date))
         return bills
       })
     }

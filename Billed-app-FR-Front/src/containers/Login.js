@@ -40,7 +40,7 @@ export default class Login {
   handleSubmitAdmin = e => {
     e.preventDefault()
     const user = {
-      // correction des data-testid
+      // correction attribut data-testid
       type: "Admin",
       email: e.target.querySelector(`input[data-testid="admin-email-input"]`).value,
       password: e.target.querySelector(`input[data-testid="admin-password-input"]`).value,

@@ -32,7 +32,6 @@ export default class NewBill {
 
     const formData = new FormData()
     const email = JSON.parse(localStorage.getItem("user")).email
-
     formData.append('file', file)
     formData.append('email', email)
 

@@ -18,7 +18,7 @@ jest.mock('../app/format.js')
 
 describe("Given I am connected as an employee", () => {
   describe("When I am on Bills Page", () => {
-    
+
     // Vérifie que l'icône dans la colonne verticale doit être en surbrillance
     test("Then bill icon in vertical layout should be highlighted", async () => {
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
@@ -50,8 +50,6 @@ describe("Given I am connected as an employee", () => {
       const datesSorted = [...dates].sort(antiChrono)
       expect(dates).toEqual(datesSorted)
     })
-
-    
 
   })
 
